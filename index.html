@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aduantech — Comitê de Novo Cliente</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
@@ -21,9 +22,7 @@
 
   /* HEADER */
   .header { background: var(--dark); color: white; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 60px; }
-  .header-logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 600; }
-  .header-logo span { color: var(--primary); }
-  .header-sub { font-size: 12px; color: #a0b4c5; margin-top: 2px; }
+  .header-logo img { height: 36px; }
 
   /* NAV */
   .nav { background: white; border-bottom: 2px solid var(--primary); padding: 0 2rem; display: flex; gap: 0; }
@@ -128,16 +127,7 @@
 
 <div class="header">
   <div class="header-logo">
-    <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
-      <polygon points="50,5 90,27.5 90,72.5 50,95 10,72.5 10,27.5" fill="none" stroke="#ff8605" stroke-width="8"/>
-      <polygon points="50,20 78,35 78,65 50,80 22,65 22,35" fill="none" stroke="#ff8605" stroke-width="6"/>
-      <rect x="36" y="36" width="28" height="28" rx="4" fill="#15344f"/>
-      <text x="50" y="56" text-anchor="middle" fill="white" font-size="18" font-weight="bold">A</text>
-    </svg>
-    <div>
-      <div>aduan<span>tech</span></div>
-      <div class="header-sub">CONSULTING — Sistema Interno</div>
-    </div>
+    <img src="logo.png" alt="Aduantech Consulting">
   </div>
   <div id="auth-status-header" style="font-size:13px;color:#a0b4c5;">Não conectado ao Google Drive</div>
 </div>
