@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aduantech — Comitê de Novo Cliente</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #ff8605;
+    --dark: #15344f;
+    --light-bg: #f8f9fa;
+    --border: #dee2e6;
+    --text: #212529;
+    --muted: #6c757d;
+    --success: #198754;
+    --danger: #dc3545;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: var(--dark); color: white; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .header-logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 600; }
+  .header-logo span { color: var(--primary); }
+  .header-sub { font-size: 12px; color: #a0b4c5; margin-top: 2px; }
+
+  /* NAV */
+  .nav { background: white; border-bottom: 2px solid var(--primary); padding: 0 2rem; display: flex; gap: 0; }
+  .nav-btn { background: none; border: none; padding: 14px 20px; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .2s; }
+  .nav-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .nav-btn:hover { color: var(--dark); }
+
+  /* MAIN */
+  .main { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+
+  /* CARDS LIST */
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-title { font-size: 20px; font-weight: 600; color: var(--dark); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .btn { padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all .2s; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #e07600; }
+  .btn-dark { background: var(--dark); color: white; }
+  .btn-dark:hover { background: #0e253a; }
+  .btn-outline { background: white; color: var(--dark); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--light-bg); }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-sm { padding: 5px 12px; font-size: 13px; }
+
+  .empty-state { text-align: center; padding: 4rem 2rem; color: var(--muted); background: white; border-radius: 10px; border: 1px dashed var(--border); }
+  .empty-state svg { margin-bottom: 1rem; opacity: .4; }
+  .empty-state p { font-size: 15px; }
+
+  .comite-card { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 1.25rem 1.5rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; transition: box-shadow .2s; }
+  .comite-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .comite-card-info h3 { font-size: 15px; font-weight: 600; color: var(--dark); }
+  .comite-card-info p { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .comite-card-actions { display: flex; gap: 8px; }
+
+  /* FORM */
+  .form-card { background: white; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 1.5rem; overflow: hidden; }
+  .form-section-header { background: var(--dark); color: white; padding: 12px 20px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .form-section-header .num { background: var(--primary); color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .form-body { padding: 1.25rem 1.5rem; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+  .form-full { grid-column: 1 / -1; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 14px; color: var(--text); background: white; transition: border-color .2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); }
+  .form-group input.required-field { border-left: 3px solid var(--primary); }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  /* HONORÁRIOS TABLE */
+  .honor-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .honor-table th { background: var(--light-bg); padding: 8px 12px; text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  .honor-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .honor-table input { border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px; font-size: 13px; width: 100%; }
+  .honor-table input:focus { outline: none; border-color: var(--primary); }
+  .honor-total { background: var(--dark); color: white; font-weight: 600; font-size: 14px; padding: 10px 12px; border-radius: 0 0 6px 6px; display: flex; justify-content: space-between; }
+
+  /* RESPONSABILIDADES */
+  .resp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .resp-table th { background: var(--light-bg); padding: 8px 10px; text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .resp-table th:first-child { text-align: left; }
+  .resp-table td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; text-align: center; }
+  .resp-table td:first-child { text-align: left; color: var(--text); }
+  .resp-table input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+  .resp-table tr:hover { background: #fafafa; }
+
+  /* ACTIONS BAR */
+  .actions-bar { display: flex; gap: 10px; justify-content: flex-end; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--dark); color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 9999; opacity: 0; transform: translateY(20px); transition: all .3s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+
+  /* BADGE */
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-orange { background: #fff3e0; color: #e65100; }
+
+  /* GOOGLE AUTH */
+  .auth-banner { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .auth-banner-info h3 { font-size: 15px; font-weight: 600; color: var(--dark); }
+  .auth-banner-info p { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .auth-status { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-green { background: var(--success); }
+  .dot-red { background: var(--danger); }
+  .dot-orange { background: var(--primary); }
+  .btn-google { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid var(--border); border-radius: 6px; padding: 8px 16px; font-size: 14px; cursor: pointer; font-weight: 500; transition: background .2s; }
+  .btn-google:hover { background: var(--light-bg); }
+  .btn-google svg { width: 18px; height: 18px; }
+
+  @media (max-width: 600px) {
+    .form-grid, .form-grid-3 { grid-template-columns: 1fr; }
+    .comite-card { flex-direction: column; gap: 1rem; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">
+    <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
+      <polygon points="50,5 90,27.5 90,72.5 50,95 10,72.5 10,27.5" fill="none" stroke="#ff8605" stroke-width="8"/>
+      <polygon points="50,20 78,35 78,65 50,80 22,65 22,35" fill="none" stroke="#ff8605" stroke-width="6"/>
+      <rect x="36" y="36" width="28" height="28" rx="4" fill="#15344f"/>
+      <text x="50" y="56" text-anchor="middle" fill="white" font-size="18" font-weight="bold">A</text>
+    </svg>
+    <div>
+      <div>aduan<span>tech</span></div>
+      <div class="header-sub">CONSULTING — Sistema Interno</div>
+    </div>
+  </div>
+  <div id="auth-status-header" style="font-size:13px;color:#a0b4c5;">Não conectado ao Google Drive</div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="showPage('lista')">📋 Comitês Salvos</button>
+  <button class="nav-btn" onclick="showPage('novo')">➕ Novo Comitê</button>
+</div>
+
+<div class="main">
+
+  <!-- AUTH BANNER -->
+  <div class="auth-banner" id="auth-banner">
+    <div class="auth-banner-info">
+      <h3>Conexão com Google Drive</h3>
+      <p>Conecte sua conta Google para salvar e sincronizar os comitês.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="auth-status" id="auth-status-text">
+        <div class="dot dot-red"></div> Desconectado
+      </div>
+      <button class="btn-google" id="btn-google-auth" onclick="handleAuth()">
+        <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Conectar Google
+      </button>
+    </div>
+  </div>
+
+  <!-- LISTA PAGE -->
+  <div class="page active" id="page-lista">
+    <div class="page-title">
+      Comitês Salvos
+      <button class="btn btn-primary" onclick="showPage('novo'); resetForm();">+ Novo Comitê</button>
+    </div>
+    <div id="lista-container">
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <p>Nenhum comitê salvo ainda.</p>
+        <p style="margin-top:8px;font-size:13px;">Crie o primeiro clicando em "Novo Comitê".</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORM PAGE -->
+  <div class="page" id="page-novo">
+    <div class="page-title">
+      <span id="form-title">Novo Comitê</span>
+    </div>
+
+    <!-- 1. DADOS DO CLIENTE -->
+    <div class="form-card">
+      <div class="form-section-header"><div class="num">1</div> Dados do Cliente</div>
+      <div class="form-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Cliente / Razão Social</label>
+            <input type="text" id="f_razao" placeholder="Nome da empresa">
+          </div>
+          <div class="form-group">
+            <label>CNPJ <span style="color:var(--primary)">*</span></label>
+            <input type="text" id="f_cnpj" class="required-field" placeholder="00.000.000/0000-00" oninput="maskCNPJ(this)">
+          </div>
+          <div class="form-group">
+            <label>Regime Tributário</label>
+            <select id="f_regime">
+              <option value="">Selecione...</option>
+              <option>Simples Nacional</option>
+              <option>Lucro Presumido</option>
+              <option>Lucro Real</option>
+              <option>MEI</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Telefone</label>
+            <input type="text" id="f_telefone" placeholder="(00) 00000-0000">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. IMPORTAÇÃO -->
+    <div class="form-card">
+      <div class="form-section-header"><div class="num">2</div> Informações de Importação</div>
+      <div class="form-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Modalidade de Importação</label>
+            <select id="f_modalidade">
+              <option value="">Selecione...</option>
+              <option>Por Conta e Ordem</option>
+              <option>Por Encomenda</option>
+              <option>Importação Direta</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Importador</label>
+            <input type="text" id="f_importador" placeholder="Nome do importador">
+          </div>
+          <div class="form-group form-full">
+            <label>CNPJ do Importador</label>
+            <input type="text" id="f_cnpj_importador" placeholder="00.000.000/0000-00" oninput="maskCNPJ(this)">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. CONTATOS -->
+    <div class="form-card">
+      <div class="form-section-header"><div class="num">3</div> Contatos</div>
+      <div class="form-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Contato Comercial</label>
+            <input type="text" id="f_contato_comercial" placeholder="Nome(s)">
+          </div>
+          <div class="form-group">
+            <label>E-mail Comercial</label>
+            <input type="email" id="f_email_comercial" placeholder="email@empresa.com">
+          </div>
+          <div class="form-group">
+            <label>Contato Operacional</label>
+            <input type="text" id="f_contato_operacional" placeholder="Nome(s)">
+          </div>
+          <div class="form-group">
+            <label>E-mail Operacional</label>
+            <input type="email" id="f_email_operacional" placeholder="email@empresa.com">
+          </div>
+          <div class="form-group form-full">
+            <label>Contatos Grupo WhatsApp</label>
+            <textarea id="f_whatsapp" placeholder="Nome (Cargo) — (00) 00000-0000"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. EQUIPE ADUANTECH -->
+    <div class="form-card">
+      <div class="form-section-header"><div class="num">4</div> Equipe Aduantech</div>
+      <div class="form-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Comercial de Venda</label>
+            <input type="text" id="f_comercial" placeholder="Nome">
+          </div>
+          <div class="form-group">
+            <label>Analista</label>
+            <input type="text" id="f_analista" placeholder="Nome">
+          </div>
+          <div class="form-group">
+            <label>Despachante (Comercial)</label>
+            <input type="text" id="f_desp_comercial" placeholder="Nome">
+          </div>
+          <div class="form-group">
+            <label>Despachante (Operacional)</label>
+            <input type="text" id="f_desp_operacional" placeholder="Nome">
+          </div>
+          <div class="form-group form-full">
+            <label>Status da Procuração</label>
+            <select id="f_procuracao">
+              <option value="">Selecione...</option>
+              <option>Solicitado pelo Comercial</option>
+              <option>Enviado ao Cliente</option>
+              <option>Assinado pelo Cliente</option>
+              <option>Registrado em Cartório</option>
+              <option>Concluído</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. FINANCEIRO -->
+    <div class="form-card">
+      <div class="form-section-header"><div class="num">5</div> Financeiro</div>
+      <div class="form-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Condição de Pagamento</label>
+            <input type="text" id="f_cond_pagamento" placeholder="Ex: 30 dias">
+          </div>
+          <div class="form-group">
+            <label>Limite de Crédito</label>
+            <input type="text" id="f_limite_credito" placeholder="R$ 0,00">
+          </div>
+          <div class="form-group form-full">
+            <label>Observações Financeiras</label>
+            <textarea id="f_obs_financeiro" placeholder="Informações adicionais sobre condições financeiras..."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. HONORÁRIOS -->
+    <div class="form-card">
+      <div class="form-section-header"><div class="num">6</div> Honorários</div>
+      <div class="form-body">
+        <table class="honor-table">
+          <thead>
+            <tr>
+              <th>Descrição do Serviço</th>
+              <th style="width:160px;">Valor (R$)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Desembaraço Aduaneiro</td><td><input type="number" id="h_desembaraco" value="0" step="0.01" oninput="calcTotal()"></td></tr>
+            <tr><td>S.D.A. (Despachante Aduaneiro)</td><td><input type="number" id="h_sda" value="0" step="0.01" oninput="calcTotal()"></td></tr>
+            <tr><td>Taxa Administrativa</td><td><input type="number" id="h_taxa_adm" value="0" step="0.01" oninput="calcTotal()"></td></tr>
+            <tr><td>Emissão de LI</td><td><input type="number" id="h_li" value="0" step="0.01" oninput="calcTotal()"></td></tr>
+            <tr><td>Consultoria (10% mín. R$ 7.500,00)</td><td><input type="number" id="h_consultoria" value="0" step="0.01" oninput="calcTotal()"></td></tr>
+            <tr><td>Outros Serviços</td><td><input type="number" id="h_outros" value="0" step="0.01" oninput="calcTotal()"></td></tr>
+            <tr><td>AD VALOREM - Gerenciamento de Risco</td><td><input type="number" id="h_advalorem" value="0" step="0.01" oninput="calcTotal()"></td></tr>
+          </tbody>
+        </table>
+        <div class="honor-total">
+          <span>TOTAL</span>
+          <span id="honor-total">R$ 0,00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. RESPONSABILIDADES -->
+    <div class="form-card">
+      <div class="form-section-header"><div class="num">7</div> Responsabilidades Operacionais</div>
+      <div class="form-body">
+        <table class="resp-table">
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Aduantech</th>
+              <th>Importador</th>
+              <th>Adquirente</th>
+            </tr>
+          </thead>
+          <tbody id="resp-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 8. OBSERVAÇÕES -->
+    <div class="form-card">
+      <div class="form-section-header"><div class="num">8</div> Observações Gerais</div>
+      <div class="form-body">
+        <div class="form-group">
+          <textarea id="f_observacoes" style="min-height:120px;" placeholder="* Serviço trading mais consultoria: 1,5%&#10;* Destaque de ICMS: 4%&#10;* Pagamento de ICMS: 1,4%&#10;* ADVALOREM GESTÃO DE RISCO: 0,8%"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions-bar">
+      <button class="btn btn-outline" onclick="showPage('lista')">Cancelar</button>
+      <button class="btn btn-dark" onclick="saveComite()">💾 Salvar Comitê</button>
+      <button class="btn btn-primary" onclick="generatePDF()">📄 Gerar PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CLIENT_ID = '780734017625-723ps1knh81166i48mgonn2ijv5ftm0g.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
+const ALLOWED_DOMAIN = 'aduantech.com.br';
+const FOLDER_NAME = 'Aduantech - Comitês';
+
+let tokenClient, gapiInited = false, gisInited = false, accessToken = null;
+let comites = [], editingId = null;
+let driveFolderId = null;
+
+const RESP_ITEMS = [
+  'Conferência e aprovação documental',
+  'Classificação fiscal dos produtos',
+  'Contratação do frete internacional',
+  'Elaboração do contrato de câmbio',
+  'Emissão da DI/DUIMP',
+  'Acompanhamento do desembaraço aduaneiro',
+  'Gestão de licenças de importação (LI)',
+  'Conferência física da mercadoria',
+  'Emissão de nota fiscal de entrada',
+  'Gestão de documentos originais',
+  'Contato com o exportador',
+  'Aprovação de documentos de embarque'
+];
+
+function initRespTable() {
+  const tbody = document.getElementById('resp-tbody');
+  tbody.innerHTML = RESP_ITEMS.map((item, i) => `
+    <tr>
+      <td>${item}</td>
+      <td><input type="checkbox" id="r_adu_${i}"></td>
+      <td><input type="checkbox" id="r_imp_${i}"></td>
+      <td><input type="checkbox" id="r_adq_${i}"></td>
+    </tr>
+  `).join('');
+}
+
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  document.querySelectorAll('.nav-btn')[p === 'lista' ? 0 : 1].classList.add('active');
+  if (p === 'lista') renderLista();
+}
+
+function maskCNPJ(el) {
+  let v = el.value.replace(/\D/g, '').slice(0, 14);
+  if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
+  else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4');
+  else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3');
+  else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,3})/, '$1.$2');
+  el.value = v;
+}
+
+function calcTotal() {
+  const ids = ['h_desembaraco','h_sda','h_taxa_adm','h_li','h_consultoria','h_outros','h_advalorem'];
+  const total = ids.reduce((s, id) => s + (parseFloat(document.getElementById(id).value) || 0), 0);
+  document.getElementById('honor-total').textContent = 'R$ ' + total.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  return total;
+}
+
+function getFormData() {
+  const respData = RESP_ITEMS.map((_, i) => ({
+    adu: document.getElementById(`r_adu_${i}`).checked,
+    imp: document.getElementById(`r_imp_${i}`).checked,
+    adq: document.getElementById(`r_adq_${i}`).checked
+  }));
+  const honorarios = {
+    desembaraco: parseFloat(document.getElementById('h_desembaraco').value)||0,
+    sda: parseFloat(document.getElementById('h_sda').value)||0,
+    taxa_adm: parseFloat(document.getElementById('h_taxa_adm').value)||0,
+    li: parseFloat(document.getElementById('h_li').value)||0,
+    consultoria: parseFloat(document.getElementById('h_consultoria').value)||0,
+    outros: parseFloat(document.getElementById('h_outros').value)||0,
+    advalorem: parseFloat(document.getElementById('h_advalorem').value)||0
+  };
+  return {
+    id: editingId || Date.now().toString(),
+    dataCriacao: editingId ? (comites.find(c=>c.id===editingId)?.dataCriacao || new Date().toISOString()) : new Date().toISOString(),
+    dataAtualizacao: new Date().toISOString(),
+    razao: document.getElementById('f_razao').value,
+    cnpj: document.getElementById('f_cnpj').value,
+    regime: document.getElementById('f_regime').value,
+    telefone: document.getElementById('f_telefone').value,
+    modalidade: document.getElementById('f_modalidade').value,
+    importador: document.getElementById('f_importador').value,
+    cnpj_importador: document.getElementById('f_cnpj_importador').value,
+    contato_comercial: document.getElementById('f_contato_comercial').value,
+    email_comercial: document.getElementById('f_email_comercial').value,
+    contato_operacional: document.getElementById('f_contato_operacional').value,
+    email_operacional: document.getElementById('f_email_operacional').value,
+    whatsapp: document.getElementById('f_whatsapp').value,
+    comercial: document.getElementById('f_comercial').value,
+    analista: document.getElementById('f_analista').value,
+    desp_comercial: document.getElementById('f_desp_comercial').value,
+    desp_operacional: document.getElementById('f_desp_operacional').value,
+    procuracao: document.getElementById('f_procuracao').value,
+    cond_pagamento: document.getElementById('f_cond_pagamento').value,
+    limite_credito: document.getElementById('f_limite_credito').value,
+    obs_financeiro: document.getElementById('f_obs_financeiro').value,
+    honorarios,
+    responsabilidades: respData,
+    observacoes: document.getElementById('f_observacoes').value
+  };
+}
+
+function setFormData(d) {
+  document.getElementById('f_razao').value = d.razao||'';
+  document.getElementById('f_cnpj').value = d.cnpj||'';
+  document.getElementById('f_regime').value = d.regime||'';
+  document.getElementById('f_telefone').value = d.telefone||'';
+  document.getElementById('f_modalidade').value = d.modalidade||'';
+  document.getElementById('f_importador').value = d.importador||'';
+  document.getElementById('f_cnpj_importador').value = d.cnpj_importador||'';
+  document.getElementById('f_contato_comercial').value = d.contato_comercial||'';
+  document.getElementById('f_email_comercial').value = d.email_comercial||'';
+  document.getElementById('f_contato_operacional').value = d.contato_operacional||'';
+  document.getElementById('f_email_operacional').value = d.email_operacional||'';
+  document.getElementById('f_whatsapp').value = d.whatsapp||'';
+  document.getElementById('f_comercial').value = d.comercial||'';
+  document.getElementById('f_analista').value = d.analista||'';
+  document.getElementById('f_desp_comercial').value = d.desp_comercial||'';
+  document.getElementById('f_desp_operacional').value = d.desp_operacional||'';
+  document.getElementById('f_procuracao').value = d.procuracao||'';
+  document.getElementById('f_cond_pagamento').value = d.cond_pagamento||'';
+  document.getElementById('f_limite_credito').value = d.limite_credito||'';
+  document.getElementById('f_obs_financeiro').value = d.obs_financeiro||'';
+  document.getElementById('f_observacoes').value = d.observacoes||'';
+  if (d.honorarios) {
+    document.getElementById('h_desembaraco').value = d.honorarios.desembaraco||0;
+    document.getElementById('h_sda').value = d.honorarios.sda||0;
+    document.getElementById('h_taxa_adm').value = d.honorarios.taxa_adm||0;
+    document.getElementById('h_li').value = d.honorarios.li||0;
+    document.getElementById('h_consultoria').value = d.honorarios.consultoria||0;
+    document.getElementById('h_outros').value = d.honorarios.outros||0;
+    document.getElementById('h_advalorem').value = d.honorarios.advalorem||0;
+    calcTotal();
+  }
+  if (d.responsabilidades) {
+    d.responsabilidades.forEach((r, i) => {
+      document.getElementById(`r_adu_${i}`).checked = r.adu;
+      document.getElementById(`r_imp_${i}`).checked = r.imp;
+      document.getElementById(`r_adq_${i}`).checked = r.adq;
+    });
+  }
+}
+
+function resetForm() {
+  editingId = null;
+  document.getElementById('form-title').textContent = 'Novo Comitê';
+  document.querySelectorAll('#page-novo input[type=text], #page-novo input[type=email], #page-novo textarea').forEach(el => el.value = '');
+  document.querySelectorAll('#page-novo select').forEach(el => el.value = '');
+  document.querySelectorAll('#page-novo input[type=number]').forEach(el => el.value = 0);
+  document.querySelectorAll('#page-novo input[type=checkbox]').forEach(el => el.checked = false);
+  calcTotal();
+}
+
+function saveComite() {
+  const data = getFormData();
+  if (!data.cnpj) { showToast('CNPJ é obrigatório!', 'error'); return; }
+  const idx = comites.findIndex(c => c.id === data.id);
+  if (idx >= 0) comites[idx] = data; else comites.push(data);
+  persistData();
+  showToast('Comitê salvo com sucesso!', 'success');
+  setTimeout(() => { showPage('lista'); resetForm(); }, 800);
+}
+
+function editComite(id) {
+  const c = comites.find(x => x.id === id);
+  if (!c) return;
+  editingId = id;
+  document.getElementById('form-title').textContent = 'Editar Comitê — ' + (c.razao || c.cnpj);
+  setFormData(c);
+  showPage('novo');
+}
+
+function deleteComite(id) {
+  if (!confirm('Tem certeza que deseja excluir este comitê?')) return;
+  comites = comites.filter(c => c.id !== id);
+  persistData();
+  renderLista();
+  showToast('Comitê excluído.', 'error');
+}
+
+function renderLista() {
+  const container = document.getElementById('lista-container');
+  if (!comites.length) {
+    container.innerHTML = `<div class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <p>Nenhum comitê salvo ainda.</p>
+      <p style="margin-top:8px;font-size:13px;">Crie o primeiro clicando em "Novo Comitê".</p>
+    </div>`;
+    return;
+  }
+  container.innerHTML = comites.map(c => {
+    const dt = new Date(c.dataAtualizacao).toLocaleDateString('pt-BR');
+    return `<div class="comite-card">
+      <div class="comite-card-info">
+        <h3>${c.razao || 'Sem razão social'}</h3>
+        <p>CNPJ: ${c.cnpj} &nbsp;•&nbsp; Atualizado em ${dt}</p>
+      </div>
+      <div class="comite-card-actions">
+        <button class="btn btn-outline btn-sm" onclick="generatePDFById('${c.id}')">📄 PDF</button>
+        <button class="btn btn-dark btn-sm" onclick="editComite('${c.id}')">✏️ Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteComite('${c.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---- GOOGLE DRIVE ----
+function loadGoogleAPIs() {
+  const s1 = document.createElement('script');
+  s1.src = 'https://accounts.google.com/gsi/client';
+  s1.onload = () => { gisInited = true; initTokenClient(); };
+  document.head.appendChild(s1);
+
+  const s2 = document.createElement('script');
+  s2.src = 'https://apis.google.com/js/api.js';
+  s2.onload = () => { gapi.load('client', async () => {
+    await gapi.client.init({ discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
+    gapiInited = true;
+  }); };
+  document.head.appendChild(s2);
+}
+
+function initTokenClient() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { showToast('Erro ao autenticar: ' + resp.error, 'error'); return; }
+      accessToken = resp.access_token;
+      gapi.client.setToken({ access_token: accessToken });
+      const ok = await checkDomain();
+      if (!ok) return;
+      updateAuthUI(true);
+      await ensureFolder();
+      await loadFromDrive();
+    }
+  });
+}
+
+function handleAuth() {
+  if (!gisInited) { showToast('APIs Google ainda carregando...', 'error'); return; }
+  if (accessToken) { signOut(); return; }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+async function checkDomain() {
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    const info = await res.json();
+    const email = info.email || '';
+    if (!email.endsWith('@' + ALLOWED_DOMAIN)) {
+      showToast('Acesso negado. Use seu e-mail @' + ALLOWED_DOMAIN, 'error');
+      google.accounts.oauth2.revoke(accessToken, () => {});
+      accessToken = null;
+      gapi.client.setToken(null);
+      return false;
+    }
+    document.getElementById('auth-status-header').title = email;
+    return true;
+  } catch(e) {
+    showToast('Erro ao verificar e-mail.', 'error');
+    return false;
+  }
+}
+
+function signOut() {
+  google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  gapi.client.setToken(null);
+  updateAuthUI(false);
+  showToast('Desconectado do Google.', '');
+}
+
+function updateAuthUI(connected) {
+  const st = document.getElementById('auth-status-text');
+  const btn = document.getElementById('btn-google-auth');
+  const hdr = document.getElementById('auth-status-header');
+  if (connected) {
+    st.innerHTML = '<div class="dot dot-green"></div> Conectado';
+    btn.innerHTML = `<svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Desconectar`;
+    hdr.textContent = '✅ Conectado ao Google Drive';
+    hdr.style.color = '#7ecb9e';
+  } else {
+    st.innerHTML = '<div class="dot dot-red"></div> Desconectado';
+    btn.innerHTML = `<svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Conectar Google`;
+    hdr.textContent = '⚠️ Não conectado ao Google Drive';
+    hdr.style.color = '#a0b4c5';
+  }
+}
+
+async function ensureFolder() {
+  const res = await gapi.client.drive.files.list({
+    q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: 'files(id,name)'
+  });
+  if (res.result.files.length) { driveFolderId = res.result.files[0].id; return; }
+  const f = await gapi.client.drive.files.create({
+    resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' },
+    fields: 'id'
+  });
+  driveFolderId = f.result.id;
+}
+
+async function loadFromDrive() {
+  if (!accessToken || !driveFolderId) return;
+  try {
+    const res = await gapi.client.drive.files.list({
+      q: `name='comites.json' and '${driveFolderId}' in parents and trashed=false`,
+      fields: 'files(id,name)'
+    });
+    if (!res.result.files.length) return;
+    const fileId = res.result.files[0].id;
+    const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    comites = await resp.json();
+    renderLista();
+    showToast('Dados carregados do Google Drive!', 'success');
+  } catch(e) { console.error(e); }
+}
+
+async function persistData() {
+  const json = JSON.stringify(comites, null, 2);
+  if (!accessToken || !driveFolderId) { showToast('Salvo localmente (sem Google Drive)', ''); return; }
+  try {
+    const res = await gapi.client.drive.files.list({
+      q: `name='comites.json' and '${driveFolderId}' in parents and trashed=false`,
+      fields: 'files(id)'
+    });
+    const blob = new Blob([json], {type:'application/json'});
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({name:'comites.json', mimeType:'application/json', ...(res.result.files.length ? {} : {parents:[driveFolderId]})})], {type:'application/json'}));
+    form.append('file', blob);
+    const method = res.result.files.length ? 'PATCH' : 'POST';
+    const url = res.result.files.length
+      ? `https://www.googleapis.com/upload/drive/v3/files/${res.result.files[0].id}?uploadType=multipart`
+      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    await fetch(url, { method, headers: { Authorization: 'Bearer ' + accessToken }, body: form });
+  } catch(e) { console.error('Drive save error:', e); }
+}
+
+// ---- PDF ----
+function fmt(v) { return v || '—'; }
+function fmtMoney(v) { return 'R$ ' + (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function buildPDF(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210, margin = 15, cw = W - margin*2;
+  let y = 0;
+
+  function header() {
+    doc.setFillColor(21, 52, 79);
+    doc.rect(0, 0, W, 28, 'F');
+    doc.setFillColor(255, 134, 5);
+    doc.rect(0, 26, W, 2, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(18); doc.setFont('helvetica','bold');
+    doc.text('COMITÊ DE NOVO CLIENTE', W/2, 12, {align:'center'});
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text('Aduantech Consulting™', W/2, 18, {align:'center'});
+    const dt = new Date().toLocaleDateString('pt-BR');
+    doc.text('Gerado em: ' + dt, W/2, 23, {align:'center'});
+    y = 35;
+  }
+
+  function sectionTitle(num, title) {
+    if (y > 240) { doc.addPage(); header(); }
+    doc.setFillColor(21, 52, 79);
+    doc.roundedRect(margin, y, cw, 8, 1, 1, 'F');
+    doc.setFillColor(255, 134, 5);
+    doc.roundedRect(margin, y, 5, 8, 1, 1, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(num + '. ' + title, margin + 8, y + 5.5);
+    y += 12;
+  }
+
+  function field(label, value, x, w) {
+    doc.setTextColor(150,150,150); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(label.toUpperCase(), x, y);
+    doc.setTextColor(30,30,30); doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.text(fmt(value), x, y + 5);
+  }
+
+  function row2(l1, v1, l2, v2) {
+    if (y > 255) { doc.addPage(); header(); }
+    const half = cw/2;
+    field(l1, v1, margin, half);
+    if (l2) field(l2, v2, margin + half, half);
+    y += 14;
+  }
+
+  function row1(l, v) {
+    if (y > 255) { doc.addPage(); header(); }
+    field(l, v, margin, cw);
+    y += 14;
+  }
+
+  function divider() { doc.setDrawColor(220,220,220); doc.line(margin, y-2, margin+cw, y-2); }
+
+  header();
+
+  // 1
+  sectionTitle(1, 'DADOS DO CLIENTE');
+  row2('Cliente / Razão Social', data.razao, 'CNPJ', data.cnpj);
+  row2('Regime Tributário', data.regime, 'Telefone', data.telefone);
+
+  // 2
+  sectionTitle(2, 'INFORMAÇÕES DE IMPORTAÇÃO');
+  row1('Modalidade de Importação', data.modalidade);
+  row2('Importador', data.importador, 'CNPJ do Importador', data.cnpj_importador);
+
+  // 3
+  sectionTitle(3, 'CONTATOS');
+  row2('Contato Comercial', data.contato_comercial, 'E-mail Comercial', data.email_comercial);
+  row2('Contato Operacional', data.contato_operacional, 'E-mail Operacional', data.email_operacional);
+  row1('Contatos Grupo WhatsApp', data.whatsapp);
+
+  // 4
+  sectionTitle(4, 'EQUIPE ADUANTECH');
+  row2('Comercial de Venda', data.comercial, 'Analista', data.analista);
+  row2('Despachante (Comercial)', data.desp_comercial, 'Despachante (Operacional)', data.desp_operacional);
+  row1('Status da Procuração', data.procuracao);
+
+  // 5
+  sectionTitle(5, 'FINANCEIRO');
+  row2('Condição de Pagamento', data.cond_pagamento, 'Limite de Crédito', data.limite_credito);
+  if (data.obs_financeiro) row1('Observações', data.obs_financeiro);
+
+  // 6 - Honorários
+  doc.addPage(); header();
+  sectionTitle(6, 'HONORÁRIOS');
+  const hItems = [
+    ['Desembaraço Aduaneiro', data.honorarios.desembaraco],
+    ['S.D.A. (Despachante Aduaneiro)', data.honorarios.sda],
+    ['Taxa Administrativa', data.honorarios.taxa_adm],
+    ['Emissão de LI', data.honorarios.li],
+    ['Consultoria (10% mín. R$ 7.500,00)', data.honorarios.consultoria],
+    ['Outros Serviços', data.honorarios.outros],
+    ['AD VALOREM - Gerenciamento de Risco', data.honorarios.advalorem]
+  ];
+  doc.setFillColor(240,242,245);
+  doc.rect(margin, y, cw, 7, 'F');
+  doc.setTextColor(100,100,100); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('DESCRIÇÃO DO SERVIÇO', margin+2, y+5);
+  doc.text('VALOR', margin+cw-30, y+5);
+  y += 7;
+  let total = 0;
+  hItems.forEach(([desc, val]) => {
+    if (y > 255) { doc.addPage(); header(); }
+    doc.setTextColor(30,30,30); doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.text(desc, margin+2, y+5);
+    doc.text(fmtMoney(val), margin+cw-2, y+5, {align:'right'});
+    doc.setDrawColor(230,230,230); doc.line(margin, y+7, margin+cw, y+7);
+    total += val||0;
+    y += 8;
+  });
+  doc.setFillColor(21,52,79);
+  doc.rect(margin, y, cw, 9, 'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text('TOTAL', margin+2, y+6);
+  doc.text(fmtMoney(total), margin+cw-2, y+6, {align:'right'});
+  y += 16;
+
+  // 7 - Responsabilidades
+  sectionTitle(7, 'RESPONSABILIDADES OPERACIONAIS');
+  doc.setFillColor(240,242,245);
+  doc.rect(margin, y, cw, 7, 'F');
+  doc.setTextColor(100,100,100); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('DESCRIÇÃO', margin+2, y+5);
+  doc.text('ADUANTECH', margin+cw*0.6, y+5);
+  doc.text('IMPORTADOR', margin+cw*0.73, y+5);
+  doc.text('ADQUIRENTE', margin+cw*0.87, y+5);
+  y += 7;
+  RESP_ITEMS.forEach((item, i) => {
+    if (y > 255) { doc.addPage(); header(); }
+    const r = data.responsabilidades[i];
+    doc.setTextColor(30,30,30); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(item, margin+2, y+4.5);
+    doc.setFontSize(11);
+    if (r.adu) doc.text('✓', margin+cw*0.62, y+4.5);
+    if (r.imp) doc.text('✓', margin+cw*0.76, y+4.5);
+    if (r.adq) doc.text('✓', margin+cw*0.9, y+4.5);
+    doc.setDrawColor(235,235,235); doc.line(margin, y+6, margin+cw, y+6);
+    y += 7;
+  });
+  y += 4;
+
+  // 8 - Observações
+  if (data.observacoes) {
+    if (y > 220) { doc.addPage(); header(); }
+    sectionTitle(8, 'OBSERVAÇÕES GERAIS');
+    doc.setTextColor(50,50,50); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    const lines = doc.splitTextToSize(data.observacoes, cw-4);
+    lines.forEach(line => {
+      if (y > 270) { doc.addPage(); header(); }
+      doc.text(line, margin+2, y);
+      y += 5;
+    });
+  }
+
+  // FOOTER em todas as páginas
+  const total_pages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= total_pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(21,52,79);
+    doc.rect(0, 285, W, 12, 'F');
+    doc.setTextColor(150,180,200); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text('Aduantech Consulting™ — Conectando empresas, expandindo negócios.', margin, 292);
+    doc.text(`Página ${p} de ${total_pages}`, W-margin, 292, {align:'right'});
+  }
+
+  return doc;
+}
+
+function generatePDF() {
+  const data = getFormData();
+  if (!data.cnpj) { showToast('Preencha ao menos o CNPJ!', 'error'); return; }
+  const doc = buildPDF(data);
+  const filename = `Comite_${(data.razao||data.cnpj).replace(/[^a-zA-Z0-9]/g,'_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`;
+  doc.save(filename);
+  if (accessToken && driveFolderId) uploadPDFtoDrive(doc, filename);
+  showToast('PDF gerado com sucesso!', 'success');
+}
+
+function generatePDFById(id) {
+  const data = comites.find(c => c.id === id);
+  if (!data) return;
+  const doc = buildPDF(data);
+  const filename = `Comite_${(data.razao||data.cnpj).replace(/[^a-zA-Z0-9]/g,'_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`;
+  doc.save(filename);
+  if (accessToken && driveFolderId) uploadPDFtoDrive(doc, filename);
+  showToast('PDF gerado com sucesso!', 'success');
+}
+
+async function uploadPDFtoDrive(doc, filename) {
+  try {
+    const pdfBlob = doc.output('blob');
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({name: filename, mimeType:'application/pdf', parents:[driveFolderId]})], {type:'application/json'}));
+    form.append('file', pdfBlob);
+    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken },
+      body: form
+    });
+    showToast('PDF salvo no Google Drive!', 'success');
+  } catch(e) { console.error('PDF Drive upload error:', e); }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// INIT
+initRespTable();
+calcTotal();
+renderLista();
+loadGoogleAPIs();
+</script>
+</body>
+</html>
