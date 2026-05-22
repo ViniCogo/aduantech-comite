@@ -400,7 +400,8 @@
 const CLIENT_ID = '780734017625-723ps1knh81166i48mgonn2ijv5ftm0g.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
 const ALLOWED_DOMAIN = 'aduantech.com.br';
-const FOLDER_NAME = 'Aduantech - Comitês';
+const SITE_URL = 'https://comite.aduantech.com.br';
+const SHARED_FOLDER_ID = '1CpciX2JdfUyWuwNvTT7_Ioiu2090IZOr';
 
 let tokenClient, gapiInited = false, gisInited = false, accessToken = null;
 let comites = [], editingId = null;
@@ -693,16 +694,7 @@ function updateAuthUI(connected) {
 }
 
 async function ensureFolder() {
-  const res = await gapi.client.drive.files.list({
-    q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-    fields: 'files(id,name)'
-  });
-  if (res.result.files.length) { driveFolderId = res.result.files[0].id; return; }
-  const f = await gapi.client.drive.files.create({
-    resource: { name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' },
-    fields: 'id'
-  });
-  driveFolderId = f.result.id;
+  driveFolderId = SHARED_FOLDER_ID;
 }
 
 async function loadFromDrive() {
