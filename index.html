@@ -196,7 +196,15 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
             <tr><td>Taxa Administrativa</td><td><input type="text" id="h_taxa_adm" placeholder="R$ 0,00"></td></tr>
             <tr><td>Emissão de LI</td><td><input type="text" id="h_li" placeholder="R$ 0,00"></td></tr>
             <tr><td>Outros Serviços</td><td><input type="text" id="h_outros" placeholder="R$ 0,00"></td></tr>
-            <tr><td>AD VALOREM - Gerenciamento de Risco/Consultoria</td><td><input type="text" id="h_advalorem" placeholder="0,00%"></td></tr>
+            <tr><td>AD VALOREM - Gerenciamento de Risco/Consultoria</td><td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span id="advalorem_label" style="font-size:13px;font-weight:600;color:var(--dark);min-width:36px;">0,8%</span>
+                <div id="advalorem_toggle" style="width:44px;height:24px;background:var(--primary);border-radius:12px;cursor:pointer;position:relative;transition:background .2s;" title="Alternar entre 0,8% e 0,5%">
+                  <div id="advalorem_knob" style="width:18px;height:18px;background:white;border-radius:50%;position:absolute;top:3px;left:3px;transition:left .2s;"></div>
+                </div>
+                <input type="hidden" id="h_advalorem" value="0,8%">
+              </div>
+            </td></tr>
           </tbody>
         </table>
         <div class="honor-total"><span>TOTAL</span><span id="honor-total">R$ 0,00</span></div>
@@ -346,6 +354,12 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     });
     HONOR_IDS.forEach(function(id){ document.getElementById(id).value=''; });
     document.getElementById('honor-total').textContent='R$ 0,00';
+    // Reset toggle AD VALOREM
+    advaloremState = '0,8%';
+    document.getElementById('h_advalorem').value = '0,8%';
+    document.getElementById('advalorem_label').textContent = '0,8%';
+    document.getElementById('advalorem_knob').style.left = '3px';
+    document.getElementById('advalorem_toggle').style.background = '#ff8605';
     RESP_ITEMS.forEach(function(_,i){
       document.getElementById('r_adu_'+i).checked=false;
       document.getElementById('r_imp_'+i).checked=false;
@@ -583,14 +597,24 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     }).catch(function(e){console.error(e);});
   }
 
-  function uploadPDFtoDrive(doc,filename) {
-    var blob=doc.output('blob');
-    var form=new FormData();
-    form.append('metadata',new Blob([JSON.stringify({name:filename,mimeType:'application/pdf',parents:[SHARED_FOLDER_ID]})],{type:'application/json'}));
-    form.append('file',blob);
-    fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:form})
-    .then(function(){ showToast('PDF salvo no Drive!','success'); })
-    .catch(function(e){console.error(e);});
+  function uploadPDFtoDrive(doc, filename) {
+    if(!accessToken){ showToast('Conecte ao Google Drive para salvar o PDF!','error'); return; }
+    var blob = doc.output('blob');
+    var metadata = JSON.stringify({name:filename, mimeType:'application/pdf', parents:[SHARED_FOLDER_ID]});
+    var form = new FormData();
+    form.append('metadata', new Blob([metadata],{type:'application/json'}));
+    form.append('file', blob);
+    fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method:'POST',
+      headers:{ Authorization:'Bearer '+accessToken },
+      body:form
+    }).then(function(r){
+      if(!r.ok) return r.text().then(function(t){ throw new Error(t); });
+      showToast('PDF salvo no Drive!','success');
+    }).catch(function(e){
+      console.error('Erro ao salvar PDF:', e);
+      showToast('Erro ao salvar PDF no Drive.','error');
+    });
   }
 
   // ---- PDF ----
@@ -686,9 +710,9 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
       doc.setTextColor(30,30,30);doc.setFontSize(9);doc.setFont('helvetica','normal');
       doc.text(item,margin+2,y+4.5);
       doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(25,135,84);
-      if(r.adu)doc.text('OK',margin+cw*0.62,y+4.5,{align:'center'});
-      if(r.imp)doc.text('OK',margin+cw*0.76,y+4.5,{align:'center'});
-      if(r.adq)doc.text('OK',margin+cw*0.9,y+4.5,{align:'center'});
+      if(r.adu)doc.text('OK',margin+cw*0.65,y+4.5,{align:'center'});
+      if(r.imp)doc.text('OK',margin+cw*0.795,y+4.5,{align:'center'});
+      if(r.adq)doc.text('OK',margin+cw*0.94,y+4.5,{align:'center'});
       doc.setTextColor(30,30,30);
       doc.setDrawColor(235,235,235);doc.line(margin,y+6,margin+cw,y+6);y+=7;
     });
@@ -712,6 +736,23 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     }
     return doc;
   }
+
+  // Toggle AD VALOREM
+  var advaloremState = '0,8%';
+  document.getElementById('advalorem_toggle').addEventListener('click', function(){
+    advaloremState = advaloremState === '0,8%' ? '0,5%' : '0,8%';
+    document.getElementById('h_advalorem').value = advaloremState;
+    document.getElementById('advalorem_label').textContent = advaloremState;
+    var knob = document.getElementById('advalorem_knob');
+    var toggle = document.getElementById('advalorem_toggle');
+    if(advaloremState === '0,5%'){
+      knob.style.left = '23px';
+      toggle.style.background = '#15344f';
+    } else {
+      knob.style.left = '3px';
+      toggle.style.background = '#ff8605';
+    }
+  });
 
   // ---- INIT ----
   initRespTable();
