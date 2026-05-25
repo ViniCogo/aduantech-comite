@@ -195,8 +195,9 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
             <tr><td>S.D.A. (Despachante Aduaneiro)</td><td><input type="text" id="h_sda" placeholder="R$ 0,00"></td></tr>
             <tr><td>Taxa Administrativa</td><td><input type="text" id="h_taxa_adm" placeholder="R$ 0,00"></td></tr>
             <tr><td>Emissão de LI</td><td><input type="text" id="h_li" placeholder="R$ 0,00"></td></tr>
+            <tr><td>Consultoria (10% mín. R$ 7.500,00)</td><td><input type="text" id="h_consultoria" placeholder="R$ 0,00"></td></tr>
             <tr><td>Outros Serviços</td><td><input type="text" id="h_outros" placeholder="R$ 0,00"></td></tr>
-            <tr><td>AD VALOREM - Gerenciamento de Risco/Consultoria</td><td><input type="text" id="h_advalorem" placeholder="0,00%"></td></tr>
+            <tr><td>AD VALOREM - Gerenciamento de Risco</td><td><input type="text" id="h_advalorem" placeholder="0,00%"></td></tr>
           </tbody>
         </table>
         <div class="honor-total"><span>TOTAL</span><span id="honor-total">R$ 0,00</span></div>
@@ -243,7 +244,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
   const ALLOWED_DOMAIN = 'aduantech.com.br';
   const SHARED_FOLDER_ID = '1CpciX2JdfUyWuwNvTT7_Ioiu2090IZOr';
-  const HONOR_IDS = ['h_desembaraco','h_sda','h_taxa_adm','h_li','h_consultoria','h_outros'];
+  const HONOR_IDS = ['h_desembaraco','h_sda','h_taxa_adm','h_li','h_outros'];
   const RESP_ITEMS = [
     'Conferência e aprovação documental','Classificação fiscal dos produtos',
     'Contratação do frete internacional','Elaboração do contrato de câmbio',
@@ -712,7 +713,12 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     return doc;
   }
 
-  // Marcar todos checkboxes por coluna
+  // ---- INIT ----
+  initRespTable();
+  renderLista();
+  loadGoogleAPIs();
+
+  // Marcar todos checkboxes por coluna (após initRespTable)
   ['adu','imp','adq'].forEach(function(col){
     document.getElementById('chk_all_'+col).addEventListener('change', function(){
       var checked = this.checked;
@@ -721,11 +727,6 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
       });
     });
   });
-
-  // ---- INIT ----
-  initRespTable();
-  renderLista();
-  loadGoogleAPIs();
 
 })();
 </script>
