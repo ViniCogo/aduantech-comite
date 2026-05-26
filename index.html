@@ -199,7 +199,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
             <tr><td>AD VALOREM - Gerenciamento de Risco/Consultoria</td><td>
               <div style="display:flex;align-items:center;gap:8px;">
                 <span id="advalorem_label" style="font-size:13px;font-weight:600;color:var(--dark);min-width:36px;">0,8%</span>
-                <div id="advalorem_toggle" style="width:44px;height:24px;background:var(--primary);border-radius:12px;cursor:pointer;position:relative;transition:background .2s;" title="Alternar entre 0,8% e 0,5%">
+                <div id="advalorem_toggle" style="width:44px;height:24px;background:var(--primary);border-radius:12px;cursor:pointer;position:relative;transition:background .2s;">
                   <div id="advalorem_knob" style="width:18px;height:18px;background:white;border-radius:50%;position:absolute;top:3px;left:3px;transition:left .2s;"></div>
                 </div>
                 <input type="hidden" id="h_advalorem" value="0,8%">
@@ -247,12 +247,12 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
 
 <script>
 (function() {
-  const CLIENT_ID = '780734017625-723ps1knh81166i48mgonn2ijv5ftm0g.apps.googleusercontent.com';
-  const SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email';
-  const ALLOWED_DOMAIN = 'aduantech.com.br';
-  const SHARED_FOLDER_ID = '1CpciX2JdfUyWuwNvTT7_Ioiu2090IZOr';
-  const HONOR_IDS = ['h_desembaraco','h_sda','h_taxa_adm','h_li','h_outros'];
-  const RESP_ITEMS = [
+  var CLIENT_ID = '780734017625-723ps1knh81166i48mgonn2ijv5ftm0g.apps.googleusercontent.com';
+  var SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email';
+  var ALLOWED_DOMAIN = 'aduantech.com.br';
+  var APPS_SCRIPT_URL = 'https://script.google.com/a/macros/aduantech.com.br/s/AKfycbzeXrbTKWXvxRpCPhu2AS59sv-DgmFDVQEFMVhus-0L-bC9adbowMZGre4_rGv6swIC/exec';
+  var HONOR_IDS = ['h_desembaraco','h_sda','h_taxa_adm','h_li','h_outros'];
+  var RESP_ITEMS = [
     'Conferência e aprovação documental','Classificação fiscal dos produtos',
     'Contratação do frete internacional','Elaboração do contrato de câmbio',
     'Emissão da DI/DUIMP','Acompanhamento do desembaraço aduaneiro',
@@ -261,8 +261,8 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     'Contato com o exportador','Aprovação de documentos de embarque'
   ];
 
-  let tokenClient, gapiInited = false, gisInited = false, accessToken = null;
-  let comites = [], editingId = null;
+  var tokenClient, gapiInited = false, gisInited = false, accessToken = null;
+  var comites = [], editingId = null, advaloremState = '0,8%';
 
   // ---- MASKS ----
   function maskCNPJ(el) {
@@ -286,19 +286,8 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   function maskMoney(el) {
     var v = el.value.replace(/\D/g,'');
     if(!v) { el.value=''; calcTotal(); return; }
-    var num = parseInt(v)/100;
-    el.value = 'R$ ' + num.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    el.value = 'R$ ' + (parseInt(v)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
     calcTotal();
-  }
-
-  function maskPercent(el) {
-    var pos = el.selectionStart;
-    var v = el.value.replace(/%/g,'').replace(/[^\d,]/g,'');
-    if(!v) { el.value=''; return; }
-    el.value = v + '%';
-    // Mantém o cursor antes do %
-    var newPos = Math.min(pos, el.value.length - 1);
-    el.setSelectionRange(newPos, newPos);
   }
 
   function parseMoney(val) {
@@ -346,7 +335,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     ['f_razao','f_cnpj','f_telefone','f_importador','f_cnpj_importador',
      'f_contato_comercial','f_email_comercial','f_contato_operacional','f_email_operacional',
      'f_whatsapp','f_comercial','f_analista','f_desp_comercial','f_desp_operacional',
-     'f_cond_pagamento','f_limite_credito','f_obs_financeiro','f_observacoes','h_advalorem'].forEach(function(id){
+     'f_cond_pagamento','f_limite_credito','f_obs_financeiro','f_observacoes'].forEach(function(id){
       var el=document.getElementById(id); if(el) el.value='';
     });
     ['f_regime','f_modalidade','f_procuracao'].forEach(function(id){
@@ -354,16 +343,18 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     });
     HONOR_IDS.forEach(function(id){ document.getElementById(id).value=''; });
     document.getElementById('honor-total').textContent='R$ 0,00';
-    // Reset toggle AD VALOREM
-    advaloremState = '0,8%';
-    document.getElementById('h_advalorem').value = '0,8%';
-    document.getElementById('advalorem_label').textContent = '0,8%';
-    document.getElementById('advalorem_knob').style.left = '3px';
-    document.getElementById('advalorem_toggle').style.background = '#ff8605';
+    advaloremState='0,8%';
+    document.getElementById('h_advalorem').value='0,8%';
+    document.getElementById('advalorem_label').textContent='0,8%';
+    document.getElementById('advalorem_knob').style.left='3px';
+    document.getElementById('advalorem_toggle').style.background='#ff8605';
     RESP_ITEMS.forEach(function(_,i){
       document.getElementById('r_adu_'+i).checked=false;
       document.getElementById('r_imp_'+i).checked=false;
       document.getElementById('r_adq_'+i).checked=false;
+    });
+    ['chk_all_adu','chk_all_imp','chk_all_adq'].forEach(function(id){
+      document.getElementById(id).checked=false;
     });
   }
 
@@ -374,9 +365,10 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     var hon = {};
     HONOR_IDS.forEach(function(id){ hon[id.replace('h_','')] = parseMoney(document.getElementById(id).value); });
     hon.advalorem = document.getElementById('h_advalorem').value;
+    var found = comites.find(function(c){return c.id===editingId;});
     return {
       id: editingId||Date.now().toString(),
-      dataCriacao: editingId?(comites.find(function(c){return c.id===editingId;})||{}).dataCriacao||new Date().toISOString():new Date().toISOString(),
+      dataCriacao: editingId?(found?found.dataCriacao:new Date().toISOString()):new Date().toISOString(),
       dataAtualizacao: new Date().toISOString(),
       razao:document.getElementById('f_razao').value,
       cnpj:document.getElementById('f_cnpj').value,
@@ -405,14 +397,24 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   }
 
   function setFormData(d) {
-    var fields = ['razao','cnpj','regime','telefone','modalidade','importador','cnpj_importador',
-      'contato_comercial','email_comercial','contato_operacional','email_operacional','whatsapp',
-      'comercial','analista','desp_comercial','desp_operacional','procuracao','cond_pagamento','obs_financeiro','observacoes'];
-    fields.forEach(function(f){ var el=document.getElementById('f_'+f); if(el) el.value=d[f]||''; });
+    ['razao','cnpj','regime','telefone','modalidade','importador','cnpj_importador',
+     'contato_comercial','email_comercial','contato_operacional','email_operacional','whatsapp',
+     'comercial','analista','desp_comercial','desp_operacional','procuracao','cond_pagamento','obs_financeiro','observacoes'
+    ].forEach(function(f){ var el=document.getElementById('f_'+f); if(el) el.value=d[f]||''; });
     if(d.limite_credito) setMoney('f_limite_credito', d.limite_credito);
     if(d.honorarios) {
       HONOR_IDS.forEach(function(id){ setMoney(id, d.honorarios[id.replace('h_','')]); });
-      document.getElementById('h_advalorem').value = d.honorarios.advalorem||'';
+      var av = d.honorarios.advalorem||'0,8%';
+      advaloremState = av;
+      document.getElementById('h_advalorem').value = av;
+      document.getElementById('advalorem_label').textContent = av;
+      if(av==='0,5%'){
+        document.getElementById('advalorem_knob').style.left='23px';
+        document.getElementById('advalorem_toggle').style.background='#15344f';
+      } else {
+        document.getElementById('advalorem_knob').style.left='3px';
+        document.getElementById('advalorem_toggle').style.background='#ff8605';
+      }
       calcTotal();
     }
     if(d.responsabilidades) {
@@ -446,7 +448,6 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     setTimeout(function(){ showPage('lista'); resetForm(); }, 800);
   }
 
-  // Expose edit/delete/pdf for inline onclick in renderLista
   window._edit = function(id) {
     var c = comites.find(function(x){return x.id===id;});
     if(!c) return;
@@ -455,50 +456,63 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     setFormData(c);
     showPage('novo');
   };
+
   window._del = function(id) {
     if(!confirm('Tem certeza que deseja excluir este comitê?')) return;
     comites = comites.filter(function(c){return c.id!==id;});
     persistData(); renderLista();
     showToast('Comitê excluído.','error');
   };
+
   window._pdf = function(id) {
     var data = comites.find(function(c){return c.id===id;});
     if(!data) return;
     var doc = buildPDF(data);
     var fname = 'Comite_'+(data.razao||data.cnpj).replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.pdf';
     doc.save(fname);
-    if(accessToken) uploadPDFtoDrive(doc,fname);
-    showToast('PDF gerado!','success');
+    uploadPDFtoDrive(doc, fname);
   };
 
-  // ---- EVENTS ----
-  document.getElementById('nav-lista').addEventListener('click', function(){ showPage('lista'); });
-  document.getElementById('nav-novo').addEventListener('click', function(){ resetForm(); showPage('novo'); });
-  document.getElementById('btn-novo-lista').addEventListener('click', function(){ resetForm(); showPage('novo'); });
-  document.getElementById('btn-cancelar').addEventListener('click', function(){ showPage('lista'); });
-  document.getElementById('btn-salvar').addEventListener('click', saveComite);
-  document.getElementById('btn-pdf').addEventListener('click', function(){
-    var data = getFormData();
-    if(!data.cnpj){ showToast('Preencha ao menos o CNPJ!','error'); return; }
-    var doc = buildPDF(data);
-    var fname = 'Comite_'+(data.razao||data.cnpj).replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.pdf';
-    doc.save(fname);
-    if(accessToken) uploadPDFtoDrive(doc,fname);
-    showToast('PDF gerado!','success');
-  });
-  document.getElementById('btn-google-auth').addEventListener('click', handleAuth);
+  // ---- DRIVE via Apps Script ----
+  function loadFromDrive() {
+    if(!accessToken) return;
+    fetch(APPS_SCRIPT_URL, {
+      headers:{ Authorization:'Bearer '+accessToken }
+    }).then(function(r){ return r.json(); })
+    .then(function(data){
+      if(Array.isArray(data)){ comites=data; renderLista(); showToast('Dados carregados!','success'); }
+    }).catch(function(e){ console.error('Erro ao carregar:',e); });
+  }
 
-  // Masks via event delegation
-  document.getElementById('f_cnpj').addEventListener('input', function(){ maskCNPJ(this); });
-  document.getElementById('f_cnpj_importador').addEventListener('input', function(){ maskCNPJ(this); });
-  document.getElementById('f_telefone').addEventListener('input', function(){ maskPhone(this); });
-  document.getElementById('f_limite_credito').addEventListener('input', function(){ maskMoney(this); });
-  document.getElementById('h_advalorem').addEventListener('input', function(){ maskPercent(this); });
-  HONOR_IDS.forEach(function(id){
-    document.getElementById(id).addEventListener('input', function(){ maskMoney(this); });
-  });
+  function persistData() {
+    if(!accessToken){ showToast('Conecte ao Google para salvar!','error'); return; }
+    fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{ Authorization:'Bearer '+accessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ type:'json', content: JSON.stringify(comites) })
+    }).then(function(r){ return r.json(); })
+    .then(function(res){ if(res && !res.ok) throw new Error(res.error); })
+    .catch(function(e){ console.error('Erro ao salvar dados:',e); });
+  }
 
-  // ---- GOOGLE ----
+  function uploadPDFtoDrive(doc, filename) {
+    if(!accessToken){ showToast('Conecte ao Google para salvar o PDF!','error'); return; }
+    var b64 = doc.output('datauristring').split(',')[1];
+    fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{ Authorization:'Bearer '+accessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ type:'pdf', filename:filename, content:b64 })
+    }).then(function(r){ return r.json(); })
+    .then(function(res){
+      if(res && !res.ok) throw new Error(res.error);
+      showToast('PDF salvo no Drive da empresa!','success');
+    }).catch(function(e){
+      console.error('Erro ao salvar PDF:',e);
+      showToast('Erro ao salvar PDF: '+e.message,'error');
+    });
+  }
+
+  // ---- GOOGLE AUTH ----
   function handleAuth() {
     if(!gisInited){ showToast('APIs Google ainda carregando...','error'); return; }
     if(accessToken){ signOut(); return; }
@@ -507,14 +521,17 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
 
   function signOut() {
     google.accounts.oauth2.revoke(accessToken, function(){});
-    accessToken=null; gapi.client.setToken(null);
+    accessToken=null;
     sessionStorage.removeItem('gtoken');
     sessionStorage.removeItem('gtoken_exp');
-    updateAuthUI(false); showToast('Desconectado.','');
+    updateAuthUI(false);
+    showToast('Desconectado.','');
   }
 
   function updateAuthUI(connected) {
-    var st=document.getElementById('auth-status-text'), btn=document.getElementById('btn-google-auth'), hdr=document.getElementById('auth-status-header');
+    var st=document.getElementById('auth-status-text');
+    var btn=document.getElementById('btn-google-auth');
+    var hdr=document.getElementById('auth-status-header');
     var ico='<svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
     if(connected){
       st.innerHTML='<div class="dot dot-green"></div> Conectado';
@@ -533,7 +550,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     document.head.appendChild(s1);
     var s2=document.createElement('script'); s2.src='https://apis.google.com/js/api.js';
     s2.onload=function(){ gapi.load('client',function(){
-      gapi.client.init({discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']}).then(function(){ gapiInited=true; });
+      gapi.client.init({}).then(function(){ gapiInited=true; });
     });};
     document.head.appendChild(s2);
   }
@@ -544,9 +561,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
       callback: function(resp) {
         if(resp.error){ showToast('Erro: '+resp.error,'error'); return; }
         accessToken=resp.access_token;
-        gapi.client.setToken({access_token:accessToken});
-        // Salva expiração do token
-        var exp = Date.now() + (resp.expires_in - 60) * 1000;
+        var exp = Date.now() + ((resp.expires_in||3600) - 60) * 1000;
         sessionStorage.setItem('gtoken', accessToken);
         sessionStorage.setItem('gtoken_exp', exp);
         checkDomain().then(function(ok){
@@ -556,12 +571,10 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
         });
       }
     });
-    // Tenta restaurar token da sessão
     var saved = sessionStorage.getItem('gtoken');
     var exp = parseInt(sessionStorage.getItem('gtoken_exp')||'0');
     if(saved && Date.now() < exp) {
       accessToken = saved;
-      gapi.client.setToken({access_token:accessToken});
       updateAuthUI(true);
       loadFromDrive();
     }
@@ -574,70 +587,10 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
         if(!info.email||!info.email.endsWith('@'+ALLOWED_DOMAIN)){
           showToast('Acesso negado. Use @'+ALLOWED_DOMAIN,'error');
           google.accounts.oauth2.revoke(accessToken,function(){});
-          accessToken=null; gapi.client.setToken(null); return false;
+          accessToken=null; return false;
         }
         return true;
       }).catch(function(){ showToast('Erro ao verificar e-mail.','error'); return false; });
-  }
-
-  function loadFromDrive() {
-    if(!accessToken) return;
-    gapi.client.drive.files.list({
-      q:"name='comites.json' and '"+SHARED_FOLDER_ID+"' in parents and trashed=false",
-      fields:'files(id,name)'
-    }).then(function(res){
-      if(!res.result.files.length) return;
-      var fileId=res.result.files[0].id;
-      return fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media',{headers:{Authorization:'Bearer '+accessToken}});
-    }).then(function(resp){ if(resp) return resp.json(); })
-    .then(function(data){ if(data){ comites=data; renderLista(); showToast('Dados carregados!','success'); }})
-    .catch(function(e){console.error(e);});
-  }
-
-  function persistData() {
-    if(!accessToken){ showToast('Conecte ao Google Drive para salvar!','error'); return; }
-    var json = JSON.stringify(comites,null,2);
-    gapi.client.drive.files.list({
-      q:"name='comites.json' and '"+SHARED_FOLDER_ID+"' in parents and trashed=false",
-      fields:'files(id)'
-    }).then(function(res){
-      var blob=new Blob([json],{type:'application/json'});
-      var form=new FormData();
-      var meta=res.result.files.length?{name:'comites.json',mimeType:'application/json'}:{name:'comites.json',mimeType:'application/json',parents:[SHARED_FOLDER_ID]};
-      form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
-      form.append('file',blob);
-      var method=res.result.files.length?'PATCH':'POST';
-      var url=res.result.files.length?'https://www.googleapis.com/upload/drive/v3/files/'+res.result.files[0].id+'?uploadType=multipart':'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-      return fetch(url,{method:method,headers:{Authorization:'Bearer '+accessToken},body:form});
-    }).catch(function(e){console.error(e);});
-  }
-
-  function uploadPDFtoDrive(doc, filename) {
-    if(!accessToken){ showToast('Conecte ao Google Drive para salvar o PDF!','error'); return; }
-    // Primeiro verifica se a pasta existe e é acessível
-    fetch('https://www.googleapis.com/drive/v3/files/'+SHARED_FOLDER_ID+'?fields=id,name', {
-      headers:{ Authorization:'Bearer '+accessToken }
-    }).then(function(r){
-      if(!r.ok) throw new Error('Pasta não acessível: '+r.status);
-      return r.json();
-    }).then(function(){
-      var blob = doc.output('blob');
-      var metadata = JSON.stringify({name:filename, mimeType:'application/pdf', parents:[SHARED_FOLDER_ID]});
-      var form = new FormData();
-      form.append('metadata', new Blob([metadata],{type:'application/json'}));
-      form.append('file', blob);
-      return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-        method:'POST',
-        headers:{ Authorization:'Bearer '+accessToken },
-        body:form
-      });
-    }).then(function(r){
-      if(!r.ok) return r.text().then(function(t){ throw new Error(t); });
-      showToast('PDF salvo no Drive!','success');
-    }).catch(function(e){
-      console.error('Erro ao salvar PDF:', e);
-      showToast('Erro ao salvar PDF: '+e.message,'error');
-    });
   }
 
   // ---- PDF ----
@@ -711,10 +664,11 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
       var desc=item[0],val=item[1];
       doc.setTextColor(30,30,30);doc.setFontSize(10);doc.setFont('helvetica','normal');
       doc.text(desc,margin+2,y+5);
-      var display=(desc.indexOf('AD VALOREM')>=0)?(val||'—'):(fmtMoney(val));
+      var isAdv=desc.indexOf('AD VALOREM')>=0;
+      var display=isAdv?(val||'—'):fmtMoney(val);
       doc.text(display,margin+cw-2,y+5,{align:'right'});
       doc.setDrawColor(230,230,230);doc.line(margin,y+7,margin+cw,y+7);
-      if(desc.indexOf('AD VALOREM')<0) total+=val||0;
+      if(!isAdv) total+=val||0;
       y+=8;
     });
     doc.setFillColor(21,52,79);doc.rect(margin,y,cw,9,'F');
@@ -725,7 +679,10 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     secTitle(7,'RESPONSABILIDADES OPERACIONAIS');
     doc.setFillColor(240,242,245);doc.rect(margin,y,cw,7,'F');
     doc.setTextColor(100,100,100);doc.setFontSize(8);doc.setFont('helvetica','bold');
-    doc.text('DESCRIÇÃO',margin+2,y+5);doc.text('ADUANTECH',margin+cw*0.6,y+5);doc.text('IMPORTADOR',margin+cw*0.73,y+5);doc.text('ADQUIRENTE',margin+cw*0.87,y+5);
+    doc.text('DESCRIÇÃO',margin+2,y+5);
+    doc.text('ADUANTECH',margin+cw*0.65,y+5,{align:'center'});
+    doc.text('IMPORTADOR',margin+cw*0.795,y+5,{align:'center'});
+    doc.text('ADQUIRENTE',margin+cw*0.94,y+5,{align:'center'});
     y+=7;
     RESP_ITEMS.forEach(function(item,i){
       if(y>255){doc.addPage();header();}
@@ -760,20 +717,38 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     return doc;
   }
 
-  // Toggle AD VALOREM
-  var advaloremState = '0,8%';
+  // ---- EVENTS ----
+  document.getElementById('nav-lista').addEventListener('click', function(){ showPage('lista'); });
+  document.getElementById('nav-novo').addEventListener('click', function(){ resetForm(); showPage('novo'); });
+  document.getElementById('btn-novo-lista').addEventListener('click', function(){ resetForm(); showPage('novo'); });
+  document.getElementById('btn-cancelar').addEventListener('click', function(){ showPage('lista'); });
+  document.getElementById('btn-salvar').addEventListener('click', saveComite);
+  document.getElementById('btn-pdf').addEventListener('click', function(){
+    var data = getFormData();
+    if(!data.cnpj){ showToast('Preencha ao menos o CNPJ!','error'); return; }
+    var doc = buildPDF(data);
+    var fname = 'Comite_'+(data.razao||data.cnpj).replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.pdf';
+    doc.save(fname);
+    uploadPDFtoDrive(doc, fname);
+  });
+  document.getElementById('btn-google-auth').addEventListener('click', handleAuth);
+  document.getElementById('f_cnpj').addEventListener('input', function(){ maskCNPJ(this); });
+  document.getElementById('f_cnpj_importador').addEventListener('input', function(){ maskCNPJ(this); });
+  document.getElementById('f_telefone').addEventListener('input', function(){ maskPhone(this); });
+  document.getElementById('f_limite_credito').addEventListener('input', function(){ maskMoney(this); });
+  HONOR_IDS.forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){ maskMoney(this); });
+  });
   document.getElementById('advalorem_toggle').addEventListener('click', function(){
-    advaloremState = advaloremState === '0,8%' ? '0,5%' : '0,8%';
+    advaloremState = advaloremState==='0,8%' ? '0,5%' : '0,8%';
     document.getElementById('h_advalorem').value = advaloremState;
     document.getElementById('advalorem_label').textContent = advaloremState;
-    var knob = document.getElementById('advalorem_knob');
-    var toggle = document.getElementById('advalorem_toggle');
-    if(advaloremState === '0,5%'){
-      knob.style.left = '23px';
-      toggle.style.background = '#15344f';
+    if(advaloremState==='0,5%'){
+      document.getElementById('advalorem_knob').style.left='23px';
+      this.style.background='#15344f';
     } else {
-      knob.style.left = '3px';
-      toggle.style.background = '#ff8605';
+      document.getElementById('advalorem_knob').style.left='3px';
+      this.style.background='#ff8605';
     }
   });
 
@@ -782,7 +757,6 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   renderLista();
   loadGoogleAPIs();
 
-  // Marcar todos checkboxes por coluna (após initRespTable)
   ['adu','imp','adq'].forEach(function(col){
     document.getElementById('chk_all_'+col).addEventListener('change', function(){
       var checked = this.checked;
