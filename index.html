@@ -508,6 +508,8 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   function signOut() {
     google.accounts.oauth2.revoke(accessToken, function(){});
     accessToken=null; gapi.client.setToken(null);
+    sessionStorage.removeItem('gtoken');
+    sessionStorage.removeItem('gtoken_exp');
     updateAuthUI(false); showToast('Desconectado.','');
   }
 
@@ -543,6 +545,10 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
         if(resp.error){ showToast('Erro: '+resp.error,'error'); return; }
         accessToken=resp.access_token;
         gapi.client.setToken({access_token:accessToken});
+        // Salva expiração do token
+        var exp = Date.now() + (resp.expires_in - 60) * 1000;
+        sessionStorage.setItem('gtoken', accessToken);
+        sessionStorage.setItem('gtoken_exp', exp);
         checkDomain().then(function(ok){
           if(!ok) return;
           updateAuthUI(true);
@@ -550,6 +556,15 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
         });
       }
     });
+    // Tenta restaurar token da sessão
+    var saved = sessionStorage.getItem('gtoken');
+    var exp = parseInt(sessionStorage.getItem('gtoken_exp')||'0');
+    if(saved && Date.now() < exp) {
+      accessToken = saved;
+      gapi.client.setToken({access_token:accessToken});
+      updateAuthUI(true);
+      loadFromDrive();
+    }
   }
 
   function checkDomain() {
@@ -599,21 +614,29 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
 
   function uploadPDFtoDrive(doc, filename) {
     if(!accessToken){ showToast('Conecte ao Google Drive para salvar o PDF!','error'); return; }
-    var blob = doc.output('blob');
-    var metadata = JSON.stringify({name:filename, mimeType:'application/pdf', parents:[SHARED_FOLDER_ID]});
-    var form = new FormData();
-    form.append('metadata', new Blob([metadata],{type:'application/json'}));
-    form.append('file', blob);
-    fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-      method:'POST',
-      headers:{ Authorization:'Bearer '+accessToken },
-      body:form
+    // Primeiro verifica se a pasta existe e é acessível
+    fetch('https://www.googleapis.com/drive/v3/files/'+SHARED_FOLDER_ID+'?fields=id,name', {
+      headers:{ Authorization:'Bearer '+accessToken }
+    }).then(function(r){
+      if(!r.ok) throw new Error('Pasta não acessível: '+r.status);
+      return r.json();
+    }).then(function(){
+      var blob = doc.output('blob');
+      var metadata = JSON.stringify({name:filename, mimeType:'application/pdf', parents:[SHARED_FOLDER_ID]});
+      var form = new FormData();
+      form.append('metadata', new Blob([metadata],{type:'application/json'}));
+      form.append('file', blob);
+      return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+        method:'POST',
+        headers:{ Authorization:'Bearer '+accessToken },
+        body:form
+      });
     }).then(function(r){
       if(!r.ok) return r.text().then(function(t){ throw new Error(t); });
       showToast('PDF salvo no Drive!','success');
     }).catch(function(e){
       console.error('Erro ao salvar PDF:', e);
-      showToast('Erro ao salvar PDF no Drive.','error');
+      showToast('Erro ao salvar PDF: '+e.message,'error');
     });
   }
 
