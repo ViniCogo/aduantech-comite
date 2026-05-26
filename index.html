@@ -476,9 +476,8 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   // ---- DRIVE via Apps Script ----
   function loadFromDrive() {
     if(!accessToken) return;
-    fetch(APPS_SCRIPT_URL, {
-      headers:{ Authorization:'Bearer '+accessToken }
-    }).then(function(r){ return r.json(); })
+    fetch(APPS_SCRIPT_URL+'?token='+encodeURIComponent(accessToken))
+    .then(function(r){ return r.json(); })
     .then(function(data){
       if(Array.isArray(data)){ comites=data; renderLista(); showToast('Dados carregados!','success'); }
     }).catch(function(e){ console.error('Erro ao carregar:',e); });
@@ -486,9 +485,8 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
 
   function persistData() {
     if(!accessToken){ showToast('Conecte ao Google para salvar!','error'); return; }
-    fetch(APPS_SCRIPT_URL, {
+    fetch(APPS_SCRIPT_URL+'?token='+encodeURIComponent(accessToken), {
       method:'POST',
-      headers:{ Authorization:'Bearer '+accessToken, 'Content-Type':'application/json' },
       body: JSON.stringify({ type:'json', content: JSON.stringify(comites) })
     }).then(function(r){ return r.json(); })
     .then(function(res){ if(res && !res.ok) throw new Error(res.error); })
@@ -498,9 +496,8 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   function uploadPDFtoDrive(doc, filename) {
     if(!accessToken){ showToast('Conecte ao Google para salvar o PDF!','error'); return; }
     var b64 = doc.output('datauristring').split(',')[1];
-    fetch(APPS_SCRIPT_URL, {
+    fetch(APPS_SCRIPT_URL+'?token='+encodeURIComponent(accessToken), {
       method:'POST',
-      headers:{ Authorization:'Bearer '+accessToken, 'Content-Type':'application/json' },
       body: JSON.stringify({ type:'pdf', filename:filename, content:b64 })
     }).then(function(r){ return r.json(); })
     .then(function(res){
