@@ -228,7 +228,10 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
         <div class="form-grid" id="seguro-aliquota-wrapper" style="display:none;margin-top:1rem;">
           <div class="form-group">
             <label>Alíquota do Seguro (%)</label>
-            <input type="text" id="f_aliquota_seguro" placeholder="0,00%">
+            <div style="position:relative;">
+              <input type="text" id="f_aliquota_seguro" placeholder="0,00" style="padding-right:28px;width:100%;">
+              <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none;">%</span>
+            </div>
           </div>
         </div>
       </div>
@@ -301,7 +304,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   function maskPercent(el) {
     var v = el.value.replace(/\D/g,'').slice(0,5);
     if(!v) { el.value=''; return; }
-    el.value = (parseInt(v)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '%';
+    el.value = (parseInt(v)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   }
 
   function parseMoney(val) {
@@ -325,7 +328,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     var el = document.getElementById(id);
     if(!el) return;
     if(!val) { el.value=''; return; }
-    el.value = Number(val).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '%';
+    el.value = Number(val).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   }
 
   function calcTotal() {
