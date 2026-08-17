@@ -225,6 +225,12 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
           </thead>
           <tbody id="resp-tbody"></tbody>
         </table>
+        <div class="form-grid" id="seguro-aliquota-wrapper" style="display:none;margin-top:1rem;">
+          <div class="form-group">
+            <label>Alíquota do Seguro (%)</label>
+            <input type="text" id="f_aliquota_seguro" placeholder="0,00%">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -258,8 +264,10 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     'Emissão da DI/DUIMP','Acompanhamento do desembaraço aduaneiro',
     'Gestão de licenças de importação (LI)','Conferência física da mercadoria',
     'Emissão de nota fiscal de entrada','Gestão de documentos originais',
-    'Contato com o exportador','Aprovação de documentos de embarque'
+    'Contato com o exportador','Aprovação de documentos de embarque',
+    'Contratação do seguro internacional'
   ];
+  var SEGURO_IDX = RESP_ITEMS.indexOf('Contratação do seguro internacional');
 
   var tokenClient, gapiInited = false, gisInited = false, accessToken = null;
   var comites = [], editingId = null, advaloremState = '0,8%';
@@ -290,9 +298,20 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     calcTotal();
   }
 
+  function maskPercent(el) {
+    var v = el.value.replace(/\D/g,'').slice(0,5);
+    if(!v) { el.value=''; return; }
+    el.value = (parseInt(v)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '%';
+  }
+
   function parseMoney(val) {
     if(!val) return 0;
     return parseFloat(val.replace('R$','').replace(/\s/g,'').replace(/\./g,'').replace(',','.')) || 0;
+  }
+
+  function parsePercent(val) {
+    if(!val) return 0;
+    return parseFloat(val.replace('%','').replace(/\s/g,'').replace(/\./g,'').replace(',','.')) || 0;
   }
 
   function setMoney(id, val) {
@@ -302,9 +321,23 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     el.value = 'R$ ' + val.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   }
 
+  function setPercent(id, val) {
+    var el = document.getElementById(id);
+    if(!el) return;
+    if(!val) { el.value=''; return; }
+    el.value = Number(val).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '%';
+  }
+
   function calcTotal() {
     var total = HONOR_IDS.reduce(function(s,id){ return s + parseMoney(document.getElementById(id).value); }, 0);
     document.getElementById('honor-total').textContent = 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+
+  function updateSeguroField() {
+    var wrapper = document.getElementById('seguro-aliquota-wrapper');
+    var chk = document.getElementById('r_adu_'+SEGURO_IDX);
+    if(!wrapper || !chk) return;
+    wrapper.style.display = chk.checked ? '' : 'none';
   }
 
   // ---- UI ----
@@ -327,6 +360,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     document.getElementById('resp-tbody').innerHTML = RESP_ITEMS.map(function(item,i){
       return '<tr><td>'+item+'</td><td><input type="checkbox" id="r_adu_'+i+'"></td><td><input type="checkbox" id="r_imp_'+i+'"></td><td><input type="checkbox" id="r_adq_'+i+'"></td></tr>';
     }).join('');
+    document.getElementById('r_adu_'+SEGURO_IDX).addEventListener('change', updateSeguroField);
   }
 
   function resetForm() {
@@ -335,7 +369,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     ['f_razao','f_cnpj','f_telefone','f_importador','f_cnpj_importador',
      'f_contato_comercial','f_email_comercial','f_contato_operacional','f_email_operacional',
      'f_whatsapp','f_comercial','f_analista','f_desp_comercial','f_desp_operacional',
-     'f_cond_pagamento','f_limite_credito','f_obs_financeiro','f_observacoes'].forEach(function(id){
+     'f_cond_pagamento','f_limite_credito','f_obs_financeiro','f_observacoes','f_aliquota_seguro'].forEach(function(id){
       var el=document.getElementById(id); if(el) el.value='';
     });
     ['f_regime','f_modalidade','f_procuracao'].forEach(function(id){
@@ -356,6 +390,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
     ['chk_all_adu','chk_all_imp','chk_all_adq'].forEach(function(id){
       document.getElementById(id).checked=false;
     });
+    updateSeguroField();
   }
 
   function getFormData() {
@@ -392,6 +427,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
       obs_financeiro:document.getElementById('f_obs_financeiro').value,
       honorarios:hon,
       responsabilidades:resp,
+      aliquota_seguro:parsePercent(document.getElementById('f_aliquota_seguro').value),
       observacoes:document.getElementById('f_observacoes').value
     };
   }
@@ -424,6 +460,8 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
         document.getElementById('r_adq_'+i).checked=r.adq;
       });
     }
+    setPercent('f_aliquota_seguro', d.aliquota_seguro);
+    updateSeguroField();
   }
 
   function renderLista() {
@@ -593,6 +631,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   // ---- PDF ----
   function fmt(v){return v||'—';}
   function fmtMoney(v){return 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function fmtPercent(v){return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';}
 
   function buildPDF(data) {
     var jsPDF=window.jspdf.jsPDF;
@@ -694,6 +733,10 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
       doc.setDrawColor(235,235,235);doc.line(margin,y+6,margin+cw,y+6);y+=7;
     });
     y+=4;
+    var seguroResp = data.responsabilidades && data.responsabilidades[SEGURO_IDX];
+    if(seguroResp && seguroResp.adu){
+      row1('Alíquota do Seguro',fmtPercent(data.aliquota_seguro));
+    }
 
     if(data.observacoes){
       if(y>220){doc.addPage();header();}
@@ -733,6 +776,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   document.getElementById('f_cnpj_importador').addEventListener('input', function(){ maskCNPJ(this); });
   document.getElementById('f_telefone').addEventListener('input', function(){ maskPhone(this); });
   document.getElementById('f_limite_credito').addEventListener('input', function(){ maskMoney(this); });
+  document.getElementById('f_aliquota_seguro').addEventListener('input', function(){ maskPercent(this); });
   HONOR_IDS.forEach(function(id){
     document.getElementById(id).addEventListener('input', function(){ maskMoney(this); });
   });
@@ -753,6 +797,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   initRespTable();
   renderLista();
   loadGoogleAPIs();
+  updateSeguroField();
 
   ['adu','imp','adq'].forEach(function(col){
     document.getElementById('chk_all_'+col).addEventListener('change', function(){
@@ -760,6 +805,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
       RESP_ITEMS.forEach(function(_,i){
         document.getElementById('r_'+col+'_'+i).checked = checked;
       });
+      if(col==='adu') updateSeguroField();
     });
   });
 
