@@ -274,6 +274,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
 
   var tokenClient, gapiInited = false, gisInited = false, accessToken = null;
   var comites = [], editingId = null, advaloremState = '0,8%';
+  var persistChain = Promise.resolve();
 
   // ---- MASKS ----
   function maskCNPJ(el) {
@@ -516,22 +517,34 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
 
   // ---- DRIVE via Apps Script ----
   function loadFromDrive() {
-    if(!accessToken) return;
-    fetch(APPS_SCRIPT_URL+'?token='+encodeURIComponent(accessToken)+'&action=get')
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if(Array.isArray(data)){ comites=data; renderLista(); showToast('Dados carregados!','success'); }
-    }).catch(function(e){ console.error('Erro ao carregar:',e); });
+    if(!accessToken) return persistChain;
+    // Encadeia depois do que já estiver salvando, para nunca ler um estado
+    // "no meio do caminho" de uma gravação anterior ainda em andamento.
+    return persistChain = persistChain.then(function(){
+      var url = APPS_SCRIPT_URL+'?token='+encodeURIComponent(accessToken)+'&action=get&_ts='+Date.now();
+      return fetch(url, { cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(Array.isArray(data)){ comites=data; renderLista(); showToast('Dados carregados!','success'); }
+      }).catch(function(e){ console.error('Erro ao carregar:',e); showToast('Erro ao carregar dados do Drive.','error'); });
+    });
   }
 
   function persistData() {
-    if(!accessToken){ showToast('Conecte ao Google para salvar!','error'); return; }
-    fetch(APPS_SCRIPT_URL, {
-      method:'POST',
-      body: JSON.stringify({ token:accessToken, type:'json', content: JSON.stringify(comites) })
-    }).then(function(r){ return r.json(); })
-    .then(function(res){ if(res && !res.ok) throw new Error(res.error); })
-    .catch(function(e){ console.error('Erro ao salvar dados:',e); });
+    if(!accessToken){ showToast('Conecte ao Google para salvar!','error'); return Promise.resolve(); }
+    // Tira uma "foto" do array agora (síncrono), e encadeia o envio depois do
+    // que já estiver em andamento — assim duas gravações nunca correm em
+    // paralelo e uma resposta atrasada não sobrescreve uma mais recente.
+    var snapshot = JSON.stringify(comites);
+    return persistChain = persistChain.then(function(){
+      return fetch(APPS_SCRIPT_URL, {
+        method:'POST',
+        cache:'no-store',
+        body: JSON.stringify({ token:accessToken, type:'json', content: snapshot })
+      }).then(function(r){ return r.json(); })
+      .then(function(res){ if(res && !res.ok) throw new Error(res.error); })
+      .catch(function(e){ console.error('Erro ao salvar dados:',e); showToast('Erro ao salvar no Drive: '+e.message,'error'); });
+    });
   }
 
   function uploadPDFtoDrive(doc, filename) {
