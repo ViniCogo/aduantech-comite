@@ -275,6 +275,26 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
   var tokenClient, gapiInited = false, gisInited = false, accessToken = null;
   var comites = [], editingId = null, advaloremState = '0,8%';
   var persistChain = Promise.resolve();
+  var DELETED_KEY = 'aduantech_deleted_ids';
+
+  // ---- TOMBSTONES (exclusões) ----
+  // Guarda localmente (persiste entre recarregamentos) os IDs já excluídos,
+  // para que, mesmo se o Drive devolver por alguns segundos uma cópia antiga
+  // (antes da exclusão ter sido gravada), o item excluído nunca volte a
+  // aparecer na tela.
+  function getDeletedIds() {
+    try { return JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'); }
+    catch(e) { return []; }
+  }
+  function markDeleted(id) {
+    var ids = getDeletedIds();
+    if(ids.indexOf(id) === -1) { ids.push(id); localStorage.setItem(DELETED_KEY, JSON.stringify(ids)); }
+  }
+  function stripDeleted(list) {
+    var ids = getDeletedIds();
+    if(!ids.length) return list;
+    return list.filter(function(c){ return ids.indexOf(c.id) === -1; });
+  }
 
   // ---- MASKS ----
   function maskCNPJ(el) {
@@ -501,6 +521,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
 
   window._del = function(id) {
     if(!confirm('Tem certeza que deseja excluir este comitê?')) return;
+    markDeleted(id); // tombstone: nunca mais deixa esse ID voltar, mesmo se o Drive responder com uma cópia antiga
     comites = comites.filter(function(c){return c.id!==id;});
     persistData(); renderLista();
     showToast('Comitê excluído.','error');
@@ -525,7 +546,14 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
       return fetch(url, { cache:'no-store' })
       .then(function(r){ return r.json(); })
       .then(function(data){
-        if(Array.isArray(data)){ comites=data; renderLista(); showToast('Dados carregados!','success'); }
+        if(!Array.isArray(data)) return;
+        var limpo = stripDeleted(data);
+        comites = limpo;
+        renderLista();
+        showToast('Dados carregados!','success');
+        // Se o Drive ainda tinha algum comitê já excluído (cópia atrasada),
+        // regrava a versão limpa para corrigir o arquivo na origem também.
+        if(limpo.length !== data.length) persistData();
       }).catch(function(e){ console.error('Erro ao carregar:',e); showToast('Erro ao carregar dados do Drive.','error'); });
     });
   }
