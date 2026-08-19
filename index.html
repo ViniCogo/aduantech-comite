@@ -699,12 +699,26 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:var(--text);
       doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');
       doc.text(num+'. '+title,margin+8,y+5.5);y+=12;
     }
-    function field(label,value,x){
+    function field(label,value,x,maxWidth){
       doc.setTextColor(150,150,150);doc.setFontSize(7);doc.setFont('helvetica','bold');doc.text(label.toUpperCase(),x,y);
-      doc.setTextColor(30,30,30);doc.setFontSize(10);doc.setFont('helvetica','normal');doc.text(fmt(value),x,y+5);
+      doc.setTextColor(30,30,30);doc.setFontSize(10);doc.setFont('helvetica','normal');
+      var lines = doc.splitTextToSize(fmt(value), maxWidth);
+      doc.text(lines,x,y+5);
+      return lines.length;
     }
-    function row2(l1,v1,l2,v2){if(y>255){doc.addPage();header();}field(l1,v1,margin);if(l2)field(l2,v2,margin+cw/2);y+=14;}
-    function row1(l,v){if(y>255){doc.addPage();header();}field(l,v,margin);y+=14;}
+    function row2(l1,v1,l2,v2){
+      if(y>255){doc.addPage();header();}
+      var w = cw/2 - 6;
+      var n1 = field(l1,v1,margin,w);
+      var n2 = l2 ? field(l2,v2,margin+cw/2,w) : 1;
+      var maxLines = Math.max(n1,n2);
+      y += 9 + (maxLines-1)*4.6;
+    }
+    function row1(l,v){
+      if(y>255){doc.addPage();header();}
+      var n = field(l,v,margin,cw-4);
+      y += 9 + (n-1)*4.6;
+    }
 
     header();
     secTitle(1,'DADOS DO CLIENTE');
